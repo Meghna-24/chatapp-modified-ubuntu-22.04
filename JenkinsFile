@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+ 
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Meghna-24/chatapp-modified-ubuntu-22.04.git'
+            }
+        }
+ 
+        stage('Sync Application to Backend Server') {
+            steps {
+                sh '''
+                rsync -avz --exclude='.git/' $WORKSPACE/* jenkins@10.0.169.197:/tmp/chatapp/
+                '''
+            }
+        }
+ 
+        stage('Copy fundoo to /app') {
+            steps {
+                sh '''
+                ssh jenkins@10.0.169.197 'sudo -u chatapp cp -rfv /tmp/chatapp/fundoo /app/'
+                '''
+            }
+        }
+ 
+        stage('Copy requirements.txt to /app') {
+            steps {
+                sh '''
+                ssh jenkins@10.0.169.197 'sudo -u chatapp cp -fv /tmp/chatapp/requirements.txt /app/'
+                '''
+            }
+        }
+ 
+        stage('Run Deployment Script') {
+            steps {
+                sh '''
+                ssh jenkins@10.0.169.197 'sudo -u chatapp /usr/local/bin/chatapp_deploy.sh'
+                '''
+            }
+        }
+    }
+ 
+    post {
+        success {
+            echo 'Deployment completed successfully!'
+        }
+        failure {
+            echo 'Deployment failed.'
+        }
+    }
+}
